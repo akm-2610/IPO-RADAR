@@ -1,3 +1,5 @@
+[![Daily IPO-RADAR](https://github.com/akm-2610/IPO-RADAR/actions/workflows/daily.yml/badge.svg)](https://github.com/akm-2610/IPO-RADAR/actions/workflows/daily.yml)
+
 # IPO-RADAR
 
 IPO-RADAR checks current IPO data and sends a Telegram alert only when **all**
