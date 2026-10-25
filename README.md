@@ -1,4 +1,6 @@
 [![Daily IPO-RADAR](https://github.com/akm-2610/IPO-RADAR/actions/workflows/daily.yml/badge.svg)](https://github.com/akm-2610/IPO-RADAR/actions/workflows/daily.yml)
+[![CodeQL](https://github.com/akm-2610/IPO-RADAR/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/akm-2610/IPO-RADAR/actions/workflows/github-code-scanning/codeql)
+[![Dependency Graph](https://github.com/akm-2610/IPO-RADAR/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/akm-2610/IPO-RADAR/actions/workflows/dependabot/update-graph)
 
 # IPO-RADAR
 
