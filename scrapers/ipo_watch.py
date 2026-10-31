@@ -26,6 +26,8 @@ LIST_URL = f"{BASE_URL}/ipo-grey-market-premium/"
 
 
 class IpoWatchScraper(BaseScraper):
+    allowed_hosts = frozenset({"ipowatch.in", "www.ipowatch.in"})
+
     def scrape_active(self, today: date) -> list[IPO]:
         LOGGER.info("IPO Watch scraper started")
         soup = self.get_soup(LIST_URL)
@@ -36,7 +38,11 @@ class IpoWatchScraper(BaseScraper):
                 try:
                     detail = self.get_soup(summary.source_url)
                 except ScrapeError as error:
-                    LOGGER.warning("IPO Watch detail unavailable for %s: %s", summary.name, error)
+                    LOGGER.warning(
+                        "IPO Watch detail unavailable for %s: %s",
+                        clean_text(summary.name)[:120] or "Unnamed IPO",
+                        error,
+                    )
                 else:
                     summary = parse_ipo_detail(
                         detail,
@@ -102,5 +108,6 @@ class IpoWatchScraper(BaseScraper):
                     open_date=open_date,
                     close_date=close_date,
                     source_url=url,
+                    price_band=price_text or None,
                 )
         return list(records.values())

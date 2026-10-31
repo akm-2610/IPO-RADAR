@@ -18,7 +18,7 @@ Extract:
 
 Alert Criteria:
 
-Closing Today
+IPO is currently open: `open_date <= today <= close_date`
 QIB > 5x
 Retail > 2x
 Overall > 10x
@@ -29,6 +29,10 @@ Send Telegram Alert
 
 If no match:
 Do nothing
+
+Thresholds and alert frequency are stored in `config/settings.json`. The
+self-hosted Streamlit dashboard is available at port 8501 on the private
+Tailscale network; never expose that port publicly.
 
 Environment Variables:
 
@@ -41,4 +45,3 @@ Requirements:
 * Logging
 * Error handling
 * GitHub Actions workflow
-

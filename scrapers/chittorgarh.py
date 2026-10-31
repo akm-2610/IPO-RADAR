@@ -19,6 +19,8 @@ DASHBOARD_URL = f"{BASE_URL}/ipo/ipo_dashboard.asp"
 
 
 class ChittorgarhScraper(BaseScraper):
+    allowed_hosts = frozenset({"chittorgarh.com", "www.chittorgarh.com"})
+
     def scrape_active(self, today: date) -> list[IPO]:
         LOGGER.info("Chittorgarh scraper started")
         dashboard = self.get_soup(DASHBOARD_URL)
@@ -42,7 +44,10 @@ class ChittorgarhScraper(BaseScraper):
             if record.open_date and record.close_date and record.open_date <= today <= record.close_date:
                 records.append(record)
             else:
-                LOGGER.info("%s IPO skipped because it is outside the open date range", name)
+                LOGGER.info(
+                    "%s IPO skipped because it is outside the open date range",
+                    clean_text(name)[:120] or "Unnamed IPO",
+                )
         LOGGER.info("Chittorgarh scraper found %d IPOs", len(records))
         return records
 

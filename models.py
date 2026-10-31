@@ -18,6 +18,9 @@ class IPO:
     open_date: date | None = None
     close_date: date | None = None
     source_url: str | None = None
+    issue_size: str | None = None
+    price_band: str | None = None
+    sector: str | None = None
 
     @property
     def gmp_percent(self) -> Decimal | None:

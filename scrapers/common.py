@@ -35,6 +35,8 @@ _ALIASES = {
     "open_date": ("open date", "ipo open date", "issue open date", "ipo date", "bidding start date"),
     "close_date": ("close date", "closing date", "ipo close date", "issue close date", "bidding end date"),
     "name": ("ipo name", "company name", "name"),
+    "issue_size": ("issue size", "issue size crore", "issue size (crore)"),
+    "sector": ("sector", "industry"),
 }
 
 
@@ -156,6 +158,8 @@ def _read_text_values(soup: BeautifulSoup) -> dict[str, str]:
         "overall_subscription": r"\b(?:Overall|Total)\s+Subscription\s*:?\s*([\d,.]+\s*x?)",
         "open_date": r"(?:IPO\s+)?(?:Open|Opening) Date\s*:?\s*([A-Za-z0-9, /-]{4,30})",
         "close_date": r"(?:IPO\s+)?(?:Close|Closing) Date\s*:?\s*([A-Za-z0-9, /-]{4,30})",
+        "issue_size": r"(?:Issue Size)\s*:?\s*([^|;]{1,50})",
+        "sector": r"(?:Sector|Industry)\s*:?\s*([^|;]{1,60})",
     }
     for field, pattern in patterns.items():
         match = re.search(pattern, text, re.IGNORECASE)
@@ -186,6 +190,9 @@ def parse_ipo_detail(
     qib = parse_subscription(_value(values, "qib_subscription"))
     retail = parse_subscription(_value(values, "retail_subscription"))
     overall = parse_subscription(_value(values, "overall_subscription"))
+    issue_size = _value(values, "issue_size")
+    price_band = _value(values, "issue_price")
+    sector = _value(values, "sector")
     open_date = parse_open_date(_value(values, "open_date"), today)
     close_date = parse_close_date(_value(values, "close_date"), today)
 
@@ -195,6 +202,9 @@ def parse_ipo_detail(
         qib = qib if qib is not None else fallback.qib_subscription
         retail = retail if retail is not None else fallback.retail_subscription
         overall = overall if overall is not None else fallback.overall_subscription
+        issue_size = issue_size or fallback.issue_size
+        price_band = price_band or fallback.price_band
+        sector = sector or fallback.sector
         open_date = open_date or fallback.open_date
         close_date = close_date or fallback.close_date
 
@@ -208,4 +218,7 @@ def parse_ipo_detail(
         open_date=open_date,
         close_date=close_date,
         source_url=source_url,
+        issue_size=issue_size,
+        price_band=price_band,
+        sector=sector,
     )

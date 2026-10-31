@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -13,10 +14,13 @@ from dotenv import load_dotenv
 from alert_history import AlertHistoryError, JSONAlertHistory
 from filters.alerts import alert_rejection_reasons
 from notifier.telegram import TelegramNotificationError, TelegramNotifier
+from parsing import clean_text
 from scrapers.chittorgarh import ChittorgarhScraper
 from scrapers.ipo_watch import IpoWatchScraper
 from scrapers.base import ScrapeError
 from models import IPO
+from services.settings import SettingsError, load_settings
+from services.state_store import DashboardState, StateStoreError
 
 IST = ZoneInfo("Asia/Kolkata")
 LOGGER = logging.getLogger("ipo_radar")
@@ -66,9 +70,10 @@ def load_ipo_data(today: date) -> list[IPO]:
 
 
 def format_alert(ipo: IPO) -> str:
+    safe_name = clean_text(ipo.name)[:120]
     return (
         f"🚨 IPO ALERT\n\n"
-        f"IPO: {ipo.name}\n"
+        f"IPO: {safe_name}\n"
         f"QIB: {ipo.qib_subscription}x\n"
         f"Retail: {ipo.retail_subscription}x\n"
         f"Overall: {ipo.overall_subscription}x\n"
@@ -96,6 +101,12 @@ def run() -> int:
         LOGGER.info("Telegram test message sent.")
         return 0
 
+    try:
+        settings = load_settings(PROJECT_ROOT / "config" / "settings.json")
+    except SettingsError as error:
+        LOGGER.error("Unable to load radar settings: %s", error)
+        return 1
+
     today = datetime.now(IST).date()
     try:
         records = load_ipo_data(today)
@@ -112,14 +123,31 @@ def run() -> int:
     matches: list[IPO] = []
     seen: set[str] = set()
     for ipo in records:
-        rejection_reasons = alert_rejection_reasons(ipo, today)
+        safe_name = clean_text(ipo.name)[:120] or "Unnamed IPO"
+        rejection_reasons = alert_rejection_reasons(
+            ipo,
+            today,
+            qib_threshold=Decimal(str(settings.qib_threshold)),
+            retail_threshold=Decimal(str(settings.retail_threshold)),
+            overall_threshold=Decimal(str(settings.overall_threshold)),
+            gmp_threshold_pct=Decimal(str(settings.gmp_threshold_pct)),
+        )
         if rejection_reasons:
-            LOGGER.info("%s IPO rejected because %s", ipo.name, ", ".join(rejection_reasons))
+            LOGGER.info("%s IPO rejected because %s", safe_name, ", ".join(rejection_reasons))
             continue
-        LOGGER.info("%s IPO meets all alert conditions", ipo.name)
+        LOGGER.info("%s IPO meets all alert conditions", safe_name)
         key = history.key_for(ipo)
-        if history.has_alerted(ipo) or key in seen:
-            LOGGER.info("%s IPO alert skipped because it was already sent", ipo.name)
+        last_sent = history.last_sent_on(ipo)
+        cooldown = {"daily": 1, "weekly": 7}.get(settings.alert_frequency)
+        frequency_blocked = (
+            last_sent is not None
+            and (
+                settings.alert_frequency == "once_per_ipo"
+                or (cooldown is not None and (today - last_sent).days < cooldown)
+            )
+        )
+        if frequency_blocked or key in seen:
+            LOGGER.info("%s IPO alert skipped because it was already sent", safe_name)
             continue
         matches.append(ipo)
         seen.add(key)
@@ -128,11 +156,24 @@ def run() -> int:
         return 0
 
     notifier = TelegramNotifier(token, chat_id)
+    state = DashboardState(PROJECT_ROOT / "data")
     try:
         for ipo in matches:
-            notifier.send_message(format_alert(ipo))
+            message = format_alert(ipo)
+            try:
+                notifier.send_message(message)
+            except TelegramNotificationError:
+                try:
+                    state.record_alert(ipo=ipo, message=message, status="failed")
+                except StateStoreError as state_error:
+                    LOGGER.error("Unable to record failed alert delivery: %s", state_error)
+                raise
             history.record_alert(ipo, today)
-            LOGGER.info("%s IPO alert sent", ipo.name)
+            try:
+                state.record_alert(ipo=ipo, message=message, status="sent")
+            except StateStoreError as error:
+                LOGGER.error("Telegram alert sent but dashboard history could not be saved: %s", error)
+            LOGGER.info("%s IPO alert sent", clean_text(ipo.name)[:120] or "Unnamed IPO")
     except (TelegramNotificationError, AlertHistoryError) as error:
         LOGGER.error("Unable to deliver or record IPO alert: %s", error)
         return 1

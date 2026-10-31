@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -32,6 +33,11 @@ _COMPACT_DATE_RANGE = re.compile(
 
 
 def clean_text(value: str) -> str:
+    value = "".join(
+        character
+        for character in value
+        if unicodedata.category(character) not in {"Cc", "Cf", "Cs"} or character.isspace()
+    )
     return " ".join(value.replace("\xa0", " ").split())
 
 

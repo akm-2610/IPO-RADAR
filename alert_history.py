@@ -47,6 +47,10 @@ class JSONAlertHistory:
     def has_alerted(self, ipo: IPO) -> bool:
         return self.key_for(ipo) in self._sent
 
+    def last_sent_on(self, ipo: IPO) -> date | None:
+        value = self._sent.get(self.key_for(ipo))
+        return date.fromisoformat(value) if value else None
+
     def record_alert(self, ipo: IPO, sent_on: date) -> None:
         self._sent[self.key_for(ipo)] = sent_on.isoformat()
         self._write()

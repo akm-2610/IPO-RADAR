@@ -64,10 +64,10 @@ def test_gmp_percentage_is_calculated_from_issue_price():
 
 
 def test_telegram_alert_format():
-    ipo = qualifying_ipo()
+    ipo = qualifying_ipo(name="Example IPO\nForged line\x00")
     assert format_alert(ipo) == (
         "🚨 IPO ALERT\n\n"
-        "IPO: Example IPO\n"
+        "IPO: Example IPO Forged line\n"
         "QIB: 5.01x\n"
         "Retail: 2.01x\n"
         "Overall: 10.01x\n"

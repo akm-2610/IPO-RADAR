@@ -1,0 +1,8 @@
+{
+  "gmp_threshold_pct": 20.0,
+  "qib_threshold": 5.0,
+  "retail_threshold": 2.0,
+  "overall_threshold": 10.0,
+  "alert_frequency": "once_per_ipo",
+  "refresh_interval_seconds": 300
+}

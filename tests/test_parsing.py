@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from parsing import parse_close_date, parse_issue_price, parse_open_date, parse_subscription
+from parsing import clean_text, parse_close_date, parse_issue_price, parse_open_date, parse_subscription
 
 
 def test_parse_close_date_from_range():
@@ -24,3 +24,7 @@ def test_parse_price_band_uses_upper_bound():
 def test_parse_subscription_percentage_as_multiplier():
     assert parse_subscription("250%") == Decimal("2.5")
     assert parse_subscription("5.2x") == Decimal("5.2")
+
+
+def test_clean_text_removes_control_characters_and_collapses_lines():
+    assert clean_text("ABC IPO\r\nForged\x00\u202e alert") == "ABC IPO Forged alert"
