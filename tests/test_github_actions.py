@@ -7,8 +7,9 @@ from services.github_actions import (
     get_github_token,
     get_latest_actions_run,
     load_config,
+    PINNED_GITHUB_REPOSITORY,
     render_actions_status,
-    save_github_configuration,
+    save_github_token,
 )
 
 
@@ -179,13 +180,16 @@ def test_github_server_failure_and_malformed_response_are_reported():
     assert "unexpected" in invalid_payload["message"]
 
 
-def test_saving_github_settings_updates_only_local_env(tmp_path):
+def test_github_actions_repository_is_fixed():
+    assert PINNED_GITHUB_REPOSITORY == "akm-2610/IPO-RADAR"
+
+
+def test_saving_github_token_updates_only_local_env(tmp_path):
     env_path = tmp_path / ".env"
 
-    save_github_configuration("owner/repo", token="secret", env_path=env_path)
+    save_github_token("secret", env_path=env_path)
     contents = env_path.read_text(encoding="utf-8")
 
-    assert "GITHUB_REPOSITORY=" in contents
     assert "GITHUB_TOKEN=" in contents
     assert "secret" in contents
 

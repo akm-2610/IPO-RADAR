@@ -4,6 +4,7 @@ Add-Type -AssemblyName System.Windows.Forms
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $python = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $url = "http://localhost:8501"
+$env:GITHUB_REPOSITORY = "akm-2610/IPO-RADAR"
 
 if (-not (Test-Path -LiteralPath $python)) {
     [System.Windows.Forms.MessageBox]::Show(

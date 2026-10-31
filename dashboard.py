@@ -33,8 +33,9 @@ from services.github_actions import (
     get_github_token,
     get_latest_actions_run,
     load_config,
+    PINNED_GITHUB_REPOSITORY,
     render_actions_status,
-    save_github_configuration,
+    save_github_token,
 )
 from services.ipo_service import current_status, rejection_reasons
 from services.radar_runner import run_radar_with_feedback
@@ -57,6 +58,7 @@ LOG_PATH = PROJECT_ROOT / "logs" / "ipo_radar.log"
 TEST_MESSAGE = "✅ IPO-RADAR TEST MESSAGE\n\nTelegram integration is working."
 
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
+os.environ["GITHUB_REPOSITORY"] = PINNED_GITHUB_REPOSITORY
 st.set_page_config(
     page_title="IPO RADAR | Market Monitor",
     page_icon="📡",
@@ -756,7 +758,6 @@ with settings_tab:
             overall_threshold=overall_threshold,
             alert_frequency=frequency,
             refresh_interval_seconds=int(refresh_seconds),
-            github_repository=settings.github_repository,
             github_token=settings.github_token,
         )
         try:
@@ -774,12 +775,7 @@ with settings_tab:
         "the ignored local .env file and are never displayed."
     )
     with st.form("github_settings"):
-        github_repository_input = st.text_input(
-            "GitHub repository",
-            value=github_repository,
-            placeholder="owner/repository",
-            help="Environment variables override .env; .env overrides config/settings.json.",
-        )
+        st.info(f"GitHub Actions monitoring is fixed to `{PINNED_GITHUB_REPOSITORY}`.")
         st.caption(
             "Token status: configured"
             if github_token
@@ -790,17 +786,17 @@ with settings_tab:
             value="",
             type="password",
             placeholder="Leave blank to keep the current token",
-            help="The token is never echoed back into this field.",
+            help="Used only to read Actions for the fixed IPO-RADAR repository. The token is never echoed back.",
         )
         clear_github_token = st.checkbox("Clear token saved in local .env")
         save_github = st.form_submit_button("Save GitHub configuration", type="primary")
     if save_github:
         try:
-            save_github_configuration(
-                github_repository_input,
-                token="" if clear_github_token else github_token_input or None,
-            )
-            st.success("GitHub configuration saved. Status will refresh using the new settings.")
+            if clear_github_token:
+                save_github_token("")
+            elif github_token_input:
+                save_github_token(github_token_input)
+            st.success("GitHub token settings saved for the fixed IPO-RADAR repository.")
             _cached_actions_status.clear()
             st.rerun()
         except ValueError as error:

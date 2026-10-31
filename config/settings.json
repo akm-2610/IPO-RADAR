@@ -5,6 +5,5 @@
   "overall_threshold": 10.0,
   "alert_frequency": "daily",
   "refresh_interval_seconds": 300,
-  "github_repository": "",
   "github_token": ""
 }

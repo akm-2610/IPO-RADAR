@@ -5,6 +5,5 @@
   "overall_threshold": 10.0,
   "alert_frequency": "once_per_ipo",
   "refresh_interval_seconds": 300,
-  "github_repository": "owner/repo",
   "github_token": ""
 }

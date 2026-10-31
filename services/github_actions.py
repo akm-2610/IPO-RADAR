@@ -16,6 +16,7 @@ from dotenv import dotenv_values, set_key
 
 LOGGER = logging.getLogger("ipo_radar.github")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PINNED_GITHUB_REPOSITORY = "akm-2610/IPO-RADAR"
 _INITIAL_ENVIRONMENT = {
     key: os.environ[key]
     for key in ("GITHUB_REPOSITORY", "GITHUB_TOKEN")
@@ -76,27 +77,16 @@ def load_config(
     return config
 
 
-def save_github_configuration(
-    repository: str,
-    *,
-    token: str | None = None,
-    env_path: Path | None = None,
-) -> None:
-    """Persist user-entered GitHub settings in the ignored local .env file."""
+def save_github_token(token: str, *, env_path: Path | None = None) -> None:
+    """Persist the optional GitHub token in the ignored local .env file."""
     env_path = env_path or PROJECT_ROOT / ".env"
-    if repository and not _valid_repository(repository.strip()):
-        raise ValueError("Repository must use the owner/repository format.")
     try:
         env_path.parent.mkdir(parents=True, exist_ok=True)
-        set_key(env_path, "GITHUB_REPOSITORY", repository.strip(), quote_mode="always")
-        if "GITHUB_REPOSITORY" not in _INITIAL_ENVIRONMENT:
-            os.environ["GITHUB_REPOSITORY"] = repository.strip()
-        if token is not None:
-            set_key(env_path, "GITHUB_TOKEN", token.strip(), quote_mode="always")
-            if "GITHUB_TOKEN" not in _INITIAL_ENVIRONMENT:
-                os.environ["GITHUB_TOKEN"] = token.strip()
+        set_key(env_path, "GITHUB_TOKEN", token.strip(), quote_mode="always")
+        if "GITHUB_TOKEN" not in _INITIAL_ENVIRONMENT:
+            os.environ["GITHUB_TOKEN"] = token.strip()
     except (OSError, UnicodeError) as error:
-        raise OSError("Unable to save GitHub configuration to .env.") from error
+        raise OSError("Unable to save GitHub token to .env.") from error
 
 
 def get_github_repository(config: Mapping[str, str] | None = None) -> str:
