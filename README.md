@@ -59,8 +59,11 @@ sent alerts, and errors.
 
 ## GitHub Actions
 
-The `.github/workflows/daily.yml` workflow runs every day at 4:00 PM IST
-(10:30 UTC). Add the repository secrets `TELEGRAM_BOT_TOKEN` and
+The `.github/workflows/daily.yml` workflow is scheduled daily at 04:30 UTC
+(10:00 AM IST), allowing for the approximately six-hour Actions queue delay
+observed in recent runs and targeting about 4:00 PM IST. GitHub may delay
+scheduled workflows unpredictably, so exact delivery time is not guaranteed.
+Add the repository secrets `TELEGRAM_BOT_TOKEN` and
 `TELEGRAM_CHAT_ID` in **Settings → Secrets and variables → Actions**. A manual
 `workflow_dispatch` trigger is also available. The workflow commits updates to
 `alerts_sent.json` so duplicate prevention persists across its ephemeral
