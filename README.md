@@ -94,6 +94,7 @@ IPO-RADAR/
 │   ├── scraper_service.py       # Existing source orchestration
 │   ├── telegram_service.py      # Bot test and resend actions
 │   ├── settings.py              # Validated JSON settings
+│   ├── github_actions.py        # Optional Actions API/config/status
 │   ├── state_store.py           # Snapshot, event, and health persistence
 │   ├── health.py                # Telegram, internet, Actions probes
 │   └── scoring.py               # Replaceable baseline scoring interface
@@ -160,7 +161,15 @@ rather than inferred.
   last health check. Snapshots and health are local runtime data and excluded
   from Git. Daily Actions commits the duplicate ledger and delivery events.
 - Set `GITHUB_REPOSITORY=owner/repository` to display the latest Actions run.
-  Add `GITHUB_TOKEN` only for private repositories.
+  Public repositories need no token. For private repositories, set
+  `GITHUB_TOKEN` to a Personal Access Token with Actions read access. The
+  Settings tab can save these values to the local, Git-ignored `.env` file.
+  Resolution order is process environment, `.env`, `config/settings.json`,
+  then defaults. Tokens are masked in the form and never shown in the status
+  panel. `config/settings.json.example` and `.env.example` show the supported
+  keys. Missing settings show an informational card; API errors, invalid
+  tokens, and rate limits are shown as status messages without stopping the
+  rest of the dashboard.
 - The IPO score is a transparent baseline weighted from GMP and subscription
   data. It requires all four signals; sector demand and listing gains are not
   currently available. It is not investment advice.

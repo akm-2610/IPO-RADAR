@@ -22,6 +22,8 @@ class RadarSettings:
     overall_threshold: float = 10.0
     alert_frequency: str = "once_per_ipo"
     refresh_interval_seconds: int = 300
+    github_repository: str = ""
+    github_token: str = ""
 
 
 _FREQUENCIES = {"once_per_ipo", "daily", "weekly"}

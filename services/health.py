@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -46,32 +45,6 @@ def check_system_health(
         except (requests.RequestException, ValueError):
             telegram_status = "Failure"
 
-    repository = os.getenv("GITHUB_REPOSITORY", "").strip()
-    github_status = "Not configured"
-    if repository and "/" in repository:
-        headers = {"Accept": "application/vnd.github+json"}
-        token = os.getenv("GITHUB_TOKEN", "").strip()
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        try:
-            response = http.get(
-                f"https://api.github.com/repos/{repository}/actions/runs?per_page=1",
-                headers=headers,
-                timeout=5,
-            )
-            if response.ok:
-                payload = response.json()
-                runs = payload.get("workflow_runs", []) if isinstance(payload, dict) else []
-                if runs:
-                    conclusion = runs[0].get("conclusion")
-                    github_status = "Healthy" if conclusion in {"success", None} else "Warning"
-                else:
-                    github_status = "No runs"
-            else:
-                github_status = "Unavailable"
-        except (requests.RequestException, ValueError):
-            github_status = "Unavailable"
-
     return {
         "checked_at": now,
         "internet": "Healthy" if internet else "Failure",
@@ -79,5 +52,4 @@ def check_system_health(
         "scraper": scraper_status,
         "last_scraper_run": last_scraper_run,
         "last_successful_alert": last_successful_alert,
-        "github_actions": github_status,
     }

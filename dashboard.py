@@ -28,6 +28,14 @@ from models import IPO
 from notifier.telegram import TelegramNotificationError
 from scrapers.base import ScrapeError
 from services.health import check_system_health
+from services.github_actions import (
+    get_github_repository,
+    get_github_token,
+    get_latest_actions_run,
+    load_config,
+    render_actions_status,
+    save_github_configuration,
+)
 from services.ipo_service import current_status, rejection_reasons
 from services.scoring import BaselineIPOScorer
 from services.scraper_service import fetch_open_ipos
@@ -122,11 +130,23 @@ st.markdown(
 try:
     settings = load_settings(SETTINGS_PATH)
 except SettingsError as error:
-    st.error(f"Could not load dashboard settings: {error}")
-    st.stop()
+    LOGGER.error("Dashboard settings unavailable; falling back to defaults: %s", error)
+    settings = RadarSettings()
+    st.warning("Saved dashboard settings could not be loaded. Defaults are active; other dashboard features remain available.")
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_actions_status(repository: str, token: str) -> dict[str, object]:
+    return get_latest_actions_run(
+        {"github_repository": repository, "github_token": token}
+    )
+
 
 state = DashboardState(DATA_PATH)
 telegram = TelegramService()
+github_config = load_config()
+github_repository = get_github_repository(github_config)
+github_token = get_github_token(github_config)
+github_result = _cached_actions_status(github_repository, github_token)
 today = datetime.now(IST).date()
 
 
@@ -231,6 +251,7 @@ last_refresh_text = (
     else "Awaiting first sync"
 )
 bot_status = "Configured" if telegram.configured else "Needs credentials"
+github_status = str(github_result.get("status", "unavailable")).replace("_", " ").title()
 source_text = st.session_state.get("source_name", "Not checked")
 st.markdown(
     f"""
@@ -244,6 +265,7 @@ st.markdown(
         <span class="radar-chip">SYNC · {html.escape(last_refresh_text)}</span>
         <span class="radar-chip"><span class="radar-dot">●</span> BOT · {html.escape(bot_status)}</span>
         <span class="radar-chip">DATA · {html.escape(source_text)}</span>
+        <span class="radar-chip">ACTIONS · {html.escape(github_status)}</span>
       </div>
     </div>
     """,
@@ -624,6 +646,7 @@ with health_tab:
         health = {}
         st.error(f"Could not read system health: {error}")
     if st.button("Check system health"):
+        _cached_actions_status.clear()
         _update_health()
         st.rerun()
 
@@ -632,14 +655,13 @@ with health_tab:
         tone = "🟢" if normalized in {"healthy", "configured"} else "🔴" if normalized == "failure" else "🟡"
         st.metric(label, f"{tone} {value}")
 
-    hc = st.columns(4)
+    hc = st.columns(3)
     for column, (label, key) in zip(
         hc,
         [
             ("Telegram API", "telegram"),
             ("Scraper", "scraper"),
             ("Internet", "internet"),
-            ("GitHub Actions", "github_actions"),
         ],
     ):
         with column:
@@ -647,7 +669,8 @@ with health_tab:
     st.write(f"Last scraper run: `{health.get('last_scraper_run') or last_refresh_text}`")
     st.write(f"Last successful alert: `{health.get('last_successful_alert') or 'No successful delivery recorded'}`")
     st.write(f"Health checked: `{health.get('checked_at', 'Not checked')}`")
-    st.caption("Set GITHUB_REPOSITORY (and optionally GITHUB_TOKEN for private repositories) to inspect the latest Actions run.")
+    st.markdown("#### GitHub Actions")
+    render_actions_status(github_result)
 
 
 with logs_tab:
@@ -712,6 +735,8 @@ with settings_tab:
             overall_threshold=overall_threshold,
             alert_frequency=frequency,
             refresh_interval_seconds=int(refresh_seconds),
+            github_repository=settings.github_repository,
+            github_token=settings.github_token,
         )
         try:
             save_settings(SETTINGS_PATH, updated)
@@ -720,6 +745,47 @@ with settings_tab:
         except SettingsError as error:
             st.error(f"Could not save settings: {error}")
     st.caption("The GitHub Actions runner reads this same JSON configuration after the file is pushed to the repository.")
+    st.divider()
+    st.markdown("#### GitHub Actions integration")
+    st.caption(
+        "Public repositories work without a token. For private repositories, use a "
+        "Personal Access Token with Actions read access. Tokens are saved only in "
+        "the ignored local .env file and are never displayed."
+    )
+    with st.form("github_settings"):
+        github_repository_input = st.text_input(
+            "GitHub repository",
+            value=github_repository,
+            placeholder="owner/repository",
+            help="Environment variables override .env; .env overrides config/settings.json.",
+        )
+        st.caption(
+            "Token status: configured"
+            if github_token
+            else "Token status: not configured (optional for public repositories)"
+        )
+        github_token_input = st.text_input(
+            "GitHub Personal Access Token",
+            value="",
+            type="password",
+            placeholder="Leave blank to keep the current token",
+            help="The token is never echoed back into this field.",
+        )
+        clear_github_token = st.checkbox("Clear token saved in local .env")
+        save_github = st.form_submit_button("Save GitHub configuration", type="primary")
+    if save_github:
+        try:
+            save_github_configuration(
+                github_repository_input,
+                token="" if clear_github_token else github_token_input or None,
+            )
+            st.success("GitHub configuration saved. Status will refresh using the new settings.")
+            _cached_actions_status.clear()
+            st.rerun()
+        except ValueError as error:
+            st.error(str(error))
+        except OSError as error:
+            st.error(f"Could not save GitHub configuration: {error}")
 
 
 with score_tab:
