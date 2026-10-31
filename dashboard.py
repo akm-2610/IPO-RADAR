@@ -37,6 +37,7 @@ from services.github_actions import (
     save_github_configuration,
 )
 from services.ipo_service import current_status, rejection_reasons
+from services.radar_runner import run_radar_with_feedback
 from services.scoring import BaselineIPOScorer
 from services.scraper_service import fetch_open_ipos
 from services.settings import RadarSettings, SettingsError, load_settings, save_settings
@@ -126,6 +127,22 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+run_feedback = st.session_state.pop("radar_run_feedback", None)
+if run_feedback:
+    if run_feedback["level"] == "error":
+        st.error(run_feedback["message"])
+        if run_feedback.get("details"):
+            with st.expander("Radar run details"):
+                st.code("\n".join(run_feedback["details"]), language="text")
+    elif run_feedback["level"] == "info":
+        st.info(run_feedback["message"])
+    elif run_feedback["level"] == "warning":
+        st.warning(run_feedback["message"])
+        if run_feedback.get("details"):
+            with st.expander("Refresh details"):
+                st.code("\n".join(run_feedback["details"]), language="text")
+    else:
+        st.success(run_feedback["message"])
 
 try:
     settings = load_settings(SETTINGS_PATH)
@@ -437,19 +454,23 @@ with overview:
         st.rerun()
     with action_b:
         if st.button("▶ Run radar & send eligible alerts", width="stretch"):
-            try:
-                with st.spinner("Running the configured scraper and alert rules..."):
-                    from main import run
+            from main import run
 
-                    result = run()
-                if result == 0:
-                    _refresh_data(show_success=False)
-                    st.success("Radar run completed. Review the log stream for per-IPO decisions.")
-                    st.rerun()
-                else:
-                    st.error("Radar run failed. Review the log stream for error details.")
-            except ScrapeError as error:
-                st.error(f"Radar run failed: {error}")
+            with st.spinner("Running the configured scraper and alert rules..."):
+                feedback = run_radar_with_feedback(run)
+                if feedback.level != "error":
+                    if not _refresh_data(show_success=False):
+                        feedback = type(feedback)(
+                            "warning",
+                            "Radar finished, but the dashboard could not refresh IPO data.",
+                            ("Check the application log and scraper status for details.",),
+                        )
+            st.session_state.radar_run_feedback = {
+                "level": feedback.level,
+                "message": feedback.message,
+                "details": feedback.details,
+            }
+            st.rerun()
 
 
 with analytics:
