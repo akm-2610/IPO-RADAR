@@ -69,8 +69,8 @@ sent alerts, and errors.
 
 ## GitHub Actions
 
-The `.github/workflows/daily.yml` workflow is scheduled daily at 10:30 UTC
-(4:00 PM IST). GitHub may delay scheduled workflows
+The `.github/workflows/daily.yml` workflow is scheduled daily at 04:30 UTC
+(10:00 AM IST), matching `main`. GitHub may delay scheduled workflows
 unpredictably, so exact delivery time is not guaranteed.
 Add the repository secrets `TELEGRAM_BOT_TOKEN` and
 `TELEGRAM_CHAT_ID` in **Settings → Secrets and variables → Actions**. A manual
